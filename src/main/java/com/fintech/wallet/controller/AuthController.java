@@ -5,6 +5,9 @@ import com.fintech.wallet.dto.RegisterResponse;
 import com.fintech.wallet.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import com.fintech.wallet.dto.LoginRequest;
+import com.fintech.wallet.dto.LoginResponse;
+
 
 @RestController
 @RequestMapping("/auth")
@@ -20,4 +23,10 @@ public class AuthController {
     public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
     }
+    @PostMapping("/login")
+    public LoginResponse login(@RequestBody @Valid LoginRequest request) {
+        return authService.login(request);
+    }
+
+
 }
