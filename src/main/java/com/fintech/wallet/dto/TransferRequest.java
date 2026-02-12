@@ -1,23 +1,26 @@
 package com.fintech.wallet.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-public class TopupRequest {
+public class TransferRequest {
 
-    @NotNull(message = "userId is required")
-    private Long userId;
+    @NotBlank(message = "toEmail is required")
+    @Email(message = "toEmail must be a valid email")
+    private String toEmail;
 
     @NotNull(message = "amount is required")
     @Min(value = 1, message = "amount must be greater than 0")
     private Long amount;
 
-    public Long getUserId() {
-        return userId;
+    public String getToEmail() {
+        return toEmail;
     }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public void setToEmail(String toEmail) {
+        this.toEmail = toEmail;
     }
 
     public Long getAmount() {
