@@ -5,9 +5,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class FintechWalletApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(FintechWalletApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(FintechWalletApplication.class, args);
+    }
 }
+

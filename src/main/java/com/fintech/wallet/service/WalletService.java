@@ -3,6 +3,7 @@ package com.fintech.wallet.service;
 import com.fintech.wallet.dto.BalanceResponse;
 import com.fintech.wallet.dto.TopupRequest;
 import com.fintech.wallet.dto.TopupResponse;
+import com.fintech.wallet.dto.TransactionResponse;
 import com.fintech.wallet.dto.TransferRequest;
 import com.fintech.wallet.dto.TransferResponse;
 import com.fintech.wallet.entity.Transaction;
@@ -13,10 +14,9 @@ import com.fintech.wallet.repository.UserRepository;
 import com.fintech.wallet.repository.WalletRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.fintech.wallet.dto.TransactionResponse;
-import com.fintech.wallet.entity.Transaction;
-import java.util.List;
 
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class WalletService {
@@ -80,20 +80,36 @@ public class WalletService {
                 balance
         );
     }
+
     public List<TransactionResponse> getTransactions(Long userId) {
 
         return transactionRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(tx -> new TransactionResponse(
-                        tx.getId(),
-                        tx.getType(),
-                        tx.getAmount(),
-                        tx.getBalanceAfter(),
-                        tx.getCreatedAt()
-                ))
+                .map(tx -> {
+
+                    Long counterpartyUserId = tx.getCounterpartyUserId();
+                    String counterpartyName = null;
+
+                    // kalau ada counterparty -> ambil nama dari tabel users
+                    if (counterpartyUserId != null) {
+                        counterpartyName = userRepository.findById(counterpartyUserId)
+                                .map(User::getFullName)
+                                .orElse(null);
+                    }
+
+                    return new TransactionResponse(
+                            tx.getId(),
+                            tx.getType(),
+                            tx.getAmount(),
+                            tx.getBalanceAfter(),
+                            tx.getCreatedAt(),
+                            tx.getCounterpartyUserId(),
+                            counterpartyName,
+                            tx.getTransferRef()
+                    );
+                })
                 .toList();
     }
-
 
     @Transactional
     public TransferResponse transfer(Long senderUserId, TransferRequest request) {
@@ -127,25 +143,45 @@ public class WalletService {
         if (receiverBalance == null) receiverBalance = 0L;
 
         // update saldo
-        senderWallet.setAvailableBalance(senderBalance - amount);
-        receiverWallet.setAvailableBalance(receiverBalance + amount);
+        Long senderNewBalance = senderBalance - amount;
+        Long receiverNewBalance = receiverBalance + amount;
+
+        senderWallet.setAvailableBalance(senderNewBalance);
+        receiverWallet.setAvailableBalance(receiverNewBalance);
 
         walletRepository.save(senderWallet);
         walletRepository.save(receiverWallet);
 
+        // NEW: transferRef supaya 2 transaksi bisa diketahui 1 pasang
+        String transferRef = "TRF-" + UUID.randomUUID();
+
         // simpan transaksi sender (keluar)
         transactionRepository.save(
-                new Transaction(senderUserId, "TRANSFER_OUT", amount, senderWallet.getAvailableBalance())
+                new Transaction(
+                        senderUserId,
+                        "TRANSFER_OUT",
+                        amount,
+                        senderNewBalance,
+                        receiver.getId(),  // counterparty
+                        transferRef
+                )
         );
 
         // simpan transaksi receiver (masuk)
         transactionRepository.save(
-                new Transaction(receiver.getId(), "TRANSFER_IN", amount, receiverWallet.getAvailableBalance())
+                new Transaction(
+                        receiver.getId(),
+                        "TRANSFER_IN",
+                        amount,
+                        receiverNewBalance,
+                        senderUserId,       // counterparty
+                        transferRef
+                )
         );
 
         return new TransferResponse(
                 "Transfer success",
-                senderWallet.getAvailableBalance()
+                senderNewBalance
         );
     }
 }
