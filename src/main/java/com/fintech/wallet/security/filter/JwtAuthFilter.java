@@ -31,13 +31,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // kalau endpoint public, skip
-        if (shouldNotFilter(request)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        // kalau udah ada authentication, skip (biar ga overwrite)
+        // kalau udah ada authentication, jangan overwrite
         if (SecurityContextHolder.getContext().getAuthentication() != null) {
             filterChain.doFilter(request, response);
             return;
@@ -45,7 +39,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        // kalau tidak ada Bearer token, lanjutkan aja (nanti ditolak oleh security)
+        // kalau tidak ada Bearer token, lanjutkan aja
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -60,9 +54,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         try {
+            // cek validitas token dulu
+            if (!jwtService.isTokenValid(token)) {
+                SecurityContextHolder.clearContext();
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             Long userId = jwtService.getUserIdFromToken(token);
 
             if (userId == null) {
+                SecurityContextHolder.clearContext();
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -74,12 +76,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             Collections.emptyList()
                     );
 
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            authentication.setDetails(
+                    new WebAuthenticationDetailsSource().buildDetails(request)
+            );
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        } catch (Exception ignored) {
-            // token invalid -> jangan set authentication
-            // security akan reject request ini (401)
+        } catch (Exception e) {
+            // token invalid -> pastikan context bersih
+            SecurityContextHolder.clearContext();
         }
 
         filterChain.doFilter(request, response);

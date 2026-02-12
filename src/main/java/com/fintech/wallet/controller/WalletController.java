@@ -9,6 +9,8 @@ import com.fintech.wallet.service.WalletService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import com.fintech.wallet.dto.TransactionResponse;
+import java.util.List;
 
 @RestController
 @RequestMapping("/wallet")
@@ -21,8 +23,18 @@ public class WalletController {
     }
 
     @PostMapping("/topup")
-    public TopupResponse topup(@RequestBody @Valid TopupRequest request) {
-        return walletService.topup(request);
+    public TopupResponse topup(
+            Authentication authentication,
+            @RequestBody @Valid TopupRequest request
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
+        return walletService.topup(userId, request);
+    }
+
+    @GetMapping("/transactions")
+    public List<TransactionResponse> transactions(Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        return walletService.getTransactions(userId);
     }
 
     @GetMapping("/balance")

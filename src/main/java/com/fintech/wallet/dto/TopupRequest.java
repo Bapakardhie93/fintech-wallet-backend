@@ -5,20 +5,9 @@ import jakarta.validation.constraints.NotNull;
 
 public class TopupRequest {
 
-    @NotNull(message = "userId is required")
-    private Long userId;
-
     @NotNull(message = "amount is required")
     @Min(value = 1, message = "amount must be greater than 0")
     private Long amount;
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
 
     public Long getAmount() {
         return amount;
